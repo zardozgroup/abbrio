@@ -1,0 +1,90 @@
+# Snippets used at the office.
+global_vars:
+  - name: company
+    type: echo
+    params:
+      echo: Northwind Supply
+
+matches:
+  # Meetings
+  - trigger: ";agenda"
+    markdown: |
+      **Agenda**
+      1. Updates
+      2. Decisions
+    label: Meeting agenda
+
+  - trigger: ";branch"
+    replace: "{{branch}}"
+    label: Current git branch
+    vars:
+      - name: branch
+        type: shell
+        params:
+          cmd: git branch --show-current
+
+  - trigger: ";date"
+    replace: "{{today}}"
+    label: Today's date
+    vars:
+      - name: today
+        type: date
+        params:
+          format: "%b %e, %Y"
+
+  - trigger: ";dear"
+    replace: "Dear {{form1.first_name}} {{form1.last_name}},"
+    label: Letter salutation
+    vars:
+      - name: form1
+        type: form
+        params:
+          layout: "First name: [[first_name]]\nLast name: [[last_name]]"
+          fields:
+            first_name:
+              default: "Robin"
+
+  - trigger: ";zoom"
+    replace: "Here's the meeting link: {{clip}}"
+    label: Link from clipboard
+    vars:
+      - name: clip
+        type: clipboard
+
+  - trigger: ";ty"
+    replace: "Thank you!"
+    label: Short thanks
+
+  - trigger: asap
+    replace: as soon as possible
+    label: As soon as possible
+    propagate_case: true
+    word: true
+
+  - trigger: btw
+    replace: by the way
+    label: By the way
+    propagate_case: true
+    word: true
+    search_terms: [aside, incidentally]
+
+  # Also defined in autocorrect.yml.
+  - trigger: teh
+    replace: the
+    label: Typo fix
+    propagate_case: true
+    word: true
+
+  - trigger: tymail
+    replace: "Thank you for your email. I've read it and will reply in full tomorrow."
+    label: Thanks reply
+    word: true
+
+  - trigger: ";logo"
+    image_path: "$CONFIG/images/logo.png"
+    label: Company logo
+
+  - trigger: ";sig"
+    html: "<p>Kind regards,<br><b>Robin</b></p>"
+    label: Email signature
+    force_mode: clipboard

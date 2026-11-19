@@ -1,0 +1,18 @@
+# Things typed at home.
+matches:
+  - trigger: ";addr"
+    replace: |
+      12 Harbour Lane
+      Port Ellery
+    label: Home address
+
+  - trigger: ";phone"
+    replace: "555 0142"
+    label: Phone number
+
+  - triggers: [";bday", ";birthday"]
+    replace: "Happy birthday! Hope the day is a good one."
+    label: Birthday wish
+    search_terms:
+      - congratulations
+      - party

@@ -1,0 +1,8 @@
+# Type a vowel followed by a backtick to get the accented letter.
+matches:
+  - regex: "(?P<letter>[aeiou])`"
+    replace: "{{letter}}̀"
+    label: Grave accent
+  - regex: "(?P<amount>\\d+)eur"
+    replace: "€{{amount}}"
+    label: Euro amount

@@ -1,0 +1,280 @@
+=== cursor
+@@ from line 5, -1 +1
+    replace: "Thank you for your email. I'll reply in full by $|$"
+=== clipboard
+@@ from line 5, -2 +5
+    replace: "Thank you for your email. I'll reply in full by {{clip1}}"
+    label: Thanks reply   # keep
+    vars:
+      - name: clip1
+        type: clipboard
+=== date
+@@ from line 5, -2 +10
+    replace: "Thank you for your email. I'll reply in full by {{date1}}"
+    label: Thanks reply   # keep
+    vars:
+      - name: date1
+        type: date
+        params:
+          format: "%A, %B %e, %Y"
+          offset: 172800
+          locale: en-US
+          tz: America/Los_Angeles
+=== input field
+@@ from line 5, -2 +10
+    replace: "Thank you for your email. I'll reply in full by {{form1.first_name}}"
+    label: Thanks reply   # keep
+    vars:
+      - name: form1
+        type: form
+        params:
+          layout: "First name: [[first_name]]"
+          fields:
+            first_name:
+              default: Thomas
+=== popup in existing form
+@@ from line 10, -10 +17
+    replace: "Dear {{form1.first_name}} {{form1.last_name}}, {{form1.title}}"
+    vars:
+      # who it is for
+      - name: form1
+        type: form
+        params:
+          layout: "First name: [[first_name]]\nLast name: [[last_name]]\nTitle: [[title]]"
+          fields:
+            first_name:
+              default: Thomas
+            title:
+              type: choice
+              values:
+                - Dr
+                - Prof
+                - "yes"
+              default: Dr
+=== list with separator
+@@ from line 10, -10 +16
+    replace: "Dear {{form1.first_name}} {{form1.last_name}},{{form1.tags}}"
+    vars:
+      # who it is for
+      - name: form1
+        type: form
+        params:
+          layout: "First name: [[first_name]]\nLast name: [[last_name]]\nTags: [[tags]]"
+          fields:
+            first_name:
+              default: Thomas
+            tags:
+              type: list
+              values:
+                - a
+                - b
+              separator: "; "
+=== match
+@@ from line 5, -2 +7
+    replace: "Thank you for your email. I'll reply in full by {{abbr1}}"
+    label: Thanks reply   # keep
+    vars:
+      - name: abbr1
+        type: match
+        params:
+          trigger: ";sig"
+=== script
+@@ from line 5, -2 +9
+    replace: "Thank you for your email. I'll reply in full by {{script1}}"
+    label: Thanks reply   # keep
+    vars:
+      - name: script1
+        type: script
+        params:
+          args:
+            - osascript
+            - "%CONFIG%/scripts/script1.applescript"
+=== script js
+@@ from line 5, -2 +11
+    replace: "Thank you for your email. I'll reply in full by {{script1}}"
+    label: Thanks reply   # keep
+    vars:
+      - name: script1
+        type: script
+        params:
+          args:
+            - osascript
+            - "-l"
+            - JavaScript
+            - "%CONFIG%/scripts/script1.js"
+=== choice
+@@ from line 5, -2 +10
+    replace: "Thank you for your email. I'll reply in full by {{choice1}}"
+    label: Thanks reply   # keep
+    vars:
+      - name: choice1
+        type: choice
+        params:
+          values:
+            - Plain one
+            - label: Shown
+              id: "inserted: text"
+=== random
+@@ from line 5, -2 +10
+    replace: "Thank you for your email. I'll reply in full by {{random1}}"
+    label: Thanks reply   # keep
+    vars:
+      - name: random1
+        type: random
+        params:
+          choices:
+            - Hi
+            - Hello there
+            - "no"
+=== shell
+@@ from line 5, -2 +7
+    replace: "Thank you for your email. I'll reply in full by {{shell1}}"
+    label: Thanks reply   # keep
+    vars:
+      - name: shell1
+        type: shell
+        params:
+          cmd: date +%s | tr -d '\n'
+=== shell multiline
+@@ from line 5, -2 +9
+    replace: "Thank you for your email. I'll reply in full by {{shell1}}"
+    label: Thanks reply   # keep
+    vars:
+      - name: shell1
+        type: shell
+        params:
+          cmd: |-
+            echo one
+            echo two
+=== short: edit field
+@@ from line 28, -1 +5
+        values:
+          - Support
+          - Sales
+          - Billing
+        default: Sales
+=== short: add field
+@@ from line 22, -7 +12
+    form: |-
+      Regards,
+      [[name]] ([[team]])
+      [[phone]]
+    form_fields:
+      team:
+        type: choice
+        values:
+          - Support
+          - Sales
+      phone:
+        default: "555"
+=== short: rename field
+@@ from line 24, -5 +9
+      [[who]] ([[team]])
+    form_fields:
+      team:
+        type: choice
+        values:
+          - Support
+          - Sales
+      who:
+        multiline: true
+=== short: add clipboard converts
+@@ from line 22, -7 +17
+    replace: |-
+      Regards,
+      {{form1.name}} ({{form1.team}})
+      {{clip1}}
+    vars:
+      - name: form1
+        type: form
+        params:
+          layout: "Name: [[name]]\nTeam: [[team]]"
+          fields:
+            team:
+              type: choice
+              values:
+                - Support
+                - Sales
+      - name: clip1
+        type: clipboard
+=== short: remove one field
+@@ from line 24, -5 +1
+      [[name]] ()
+=== short: remove all fields
+@@ from line 22, -7 +3
+    replace: |
+      Regards,
+       ()
+=== verbose: remove one
+@@ from line 10, -10 +7
+    replace: "Dear  {{form1.last_name}},"
+    vars:
+      # who it is for
+      - name: form1
+        type: form
+        params:
+          layout: "Last name: [[last_name]]"
+=== verbose: remove all
+@@ from line 10, -10 +1
+    replace: "Dear  ,"
+=== verbose: relabel+rename
+@@ from line 10, -10 +10
+    replace: "Dear {{form1.first_name}} {{form1.surname}},"
+    vars:
+      # who it is for
+      - name: form1
+        type: form
+        params:
+          layout: "First name: [[first_name]]\nSurname: [[surname]]"
+          fields:
+            first_name:
+              default: Thomas
+=== due: change clock only
+@@ from line 40, -1 +2
+        params:
+          format: "%I:%M %p"
+=== due: delete chip text
+@@ from line 31, -10 +7
+    replace: "Due {{due}}"
+    vars:
+      - name: due
+        type: date
+        params:
+          format: "%d/%m/%Y"
+          offset: 604800   # one week
+=== due: rename
+@@ from line 31, -7 +7
+    replace: "Due {{deadline}} at {{clock}}"
+    vars:
+      - name: deadline
+        type: date
+        params:
+          format: "%d/%m/%Y"
+          offset: 604800
+=== markdown
+@@ from line 5, -1 +1
+    markdown: "Thank you for your email. I'll reply in full by "
+=== html multi
+@@ from line 5, -1 +3
+    html: |-
+      <p>Thanks</p>
+      <p>Bye</p>
+=== picture
+@@ from line 5, -1 +1
+    image_path: "$CONFIG/images/logo.png"
+=== short to markdown
+@@ from line 22, -7 +14
+    markdown: |
+      Regards,
+      {{form1.name}} ({{form1.team}})
+    vars:
+      - name: form1
+        type: form
+        params:
+          layout: "Name: [[name]]\nTeam: [[team]]"
+          fields:
+            team:
+              type: choice
+              values:
+                - Support
+                - Sales

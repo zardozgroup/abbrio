@@ -1,0 +1,114 @@
+name: Checks
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: checks-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  checks:
+    name: Build and test
+    runs-on: xcode-27
+    timeout-minutes: 30
+    env:
+      # Ad hoc signing, so the build needs no certificate or Apple Team ID.
+      SIGNING_OVERRIDES: CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM=
+    steps:
+      - name: Check toolchain
+        run: |
+          swift --version
+          xcodebuild -version
+          version_line=$(swift --version 2>&1 | grep -Eo 'Swift version [0-9]+\.[0-9]+' | head -n 1)
+          if [[ ! "$version_line" =~ ([0-9]+)\.([0-9]+)$ ]]; then
+            echo "::error::Could not read the Swift version."
+            exit 1
+          fi
+          major=${BASH_REMATCH[1]}
+          minor=${BASH_REMATCH[2]}
+          if (( major < 6 || (major == 6 && minor < 4) )); then
+            echo "::error::Swift 6.4 or newer is required, found $major.$minor."
+            exit 1
+          fi
+          echo "Swift $major.$minor"
+
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Test packages
+        run: |
+          for package in SnippetModel ConfigStore EspansoCLI AbbrioUI; do
+            echo "::group::swift test ($package)"
+            (cd "Packages/$package" && swift test)
+            echo "::endgroup::"
+          done
+
+      - name: Test app
+        run: |
+          # shellcheck disable=SC2086
+          xcodebuild -project Abbrio.xcodeproj -scheme Abbrio \
+            -destination 'platform=macOS' \
+            -derivedDataPath "$RUNNER_TEMP/DerivedData" \
+            $SIGNING_OVERRIDES \
+            test
+
+      - name: Build universal Release
+        run: |
+          # shellcheck disable=SC2086
+          xcodebuild -project Abbrio.xcodeproj -scheme Abbrio \
+            -configuration Release \
+            -destination 'generic/platform=macOS' \
+            -derivedDataPath "$RUNNER_TEMP/DerivedData" \
+            ARCHS='arm64 x86_64' ONLY_ACTIVE_ARCH=NO \
+            $SIGNING_OVERRIDES \
+            build
+          binary="$RUNNER_TEMP/DerivedData/Build/Products/Release/Abbrio.app/Contents/MacOS/Abbrio"
+          archs=" $(lipo -archs "$binary") "
+          echo "Architectures:$archs"
+          if [[ "$archs" != *' arm64 '* || "$archs" != *' x86_64 '* ]]; then
+            echo "::error::The Release binary must contain arm64 and x86_64."
+            exit 1
+          fi
+
+      - name: Check DMG script
+        run: |
+          bash -n scripts/package-dmg.sh
+
+          # Each call must stop with exit status 1 before any signing or notarization.
+          expect_early_exit() {
+            local expected=$1
+            shift
+            local output status
+            set +e
+            output=$(env -u ABBRIO_DEVELOPMENT_TEAM -u ABBRIO_SIGNING_IDENTITY \
+              bash scripts/package-dmg.sh "$@" 2>&1)
+            status=$?
+            set -e
+            echo "$output"
+            if [[ $status -ne 1 ]]; then
+              echo "::error::Expected exit status 1, got $status (arguments: $*)."
+              exit 1
+            fi
+            if [[ "$output" != *"$expected"* ]]; then
+              echo "::error::Expected the message '$expected' (arguments: $*)."
+              exit 1
+            fi
+          }
+
+          expect_early_exit 'Usage:'
+          expect_early_exit 'Usage:' only-one-argument
+          expect_early_exit 'Usage:' one two three
+          expect_early_exit 'ABBRIO_DEVELOPMENT_TEAM' /nonexistent/Abbrio.app sample-profile

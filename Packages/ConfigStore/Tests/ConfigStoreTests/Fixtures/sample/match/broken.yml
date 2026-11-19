@@ -1,0 +1,5 @@
+matches:
+  - trigger: ";ok"
+    replace: "fine"
+  - trigger: ";bad
+    replace: "the quote above is never closed"

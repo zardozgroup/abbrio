@@ -1,0 +1,10 @@
+matches:
+  - trigger: ";sigshort"
+    replace: "Thanks,\nRobin"
+    label: Short signature
+  - trigger: ";siglong"
+    replace: |
+      Kind regards,
+      Robin Vale
+      Northwind Supply
+    label: Full signature

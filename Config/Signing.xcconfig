@@ -1,0 +1,7 @@
+// Local builds use ad hoc signing without an Apple developer account.
+CODE_SIGN_STYLE = Manual
+CODE_SIGN_IDENTITY = -
+DEVELOPMENT_TEAM =
+
+// Override these settings locally when archiving or using a development certificate.
+#include? "Signing.local.xcconfig"

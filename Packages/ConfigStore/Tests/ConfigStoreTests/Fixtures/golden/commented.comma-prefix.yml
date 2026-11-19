@@ -1,0 +1,36 @@
+# Replies used by the support desk.
+# Keep the greeting short.
+
+global_vars:
+  - name: desk
+    type: echo
+    params:
+      echo: Harbour Street Support
+
+matches:
+  # --- Greetings ---
+
+  # Opening line for a first reply.
+  - trigger: ",hello"
+    replace: "Hello, and thanks for getting in touch."
+    label: First reply   # shown in search
+
+  - trigger: ",wait"
+    # how long we usually take
+    replace: |
+      Thanks for your patience.
+
+      We answer most requests within two working days.
+    word: true
+
+  # --- Sign-offs ---
+  - triggers: [",bye", ",cheers"]
+    replace: 'Kind regards, {{desk}}'
+    propagate_case: true
+    vars:
+      - name: desk
+        type: global
+  - trigger: ",café"
+    replace: "Un café — ☕, s'il vous plaît"
+
+# Checked every spring.

@@ -1,0 +1,46 @@
+# File header comment.
+imports:
+  - "_shared.yml"
+
+matches:
+  # Comment for the first match.
+  # It has two lines.
+  - trigger: ";one"
+    replace: "first"
+
+  - trigger: ";block"
+    replace: |
+      Line one
+
+      Line three, after a blank line
+    word: true
+
+
+  # A flow-style match.
+  - { trigger: ";flow", replace: "inline" }
+
+  - &base
+    trigger: ";anchor"
+    replace: "anchored"
+    propagate_case: true
+
+  - <<: *base
+    trigger: ";merged"
+
+  - trigger: ";unicode"
+    replace: "naïve café — ☕"
+    custom_key: kept
+
+  - "a stray string"
+
+  - triggers:
+      - ";multi"
+      - ";many"
+    replace: "several"
+  # Trailing comment after the last match.
+
+global_vars:
+  - name: greeting
+    type: echo
+    params:
+      echo: Hello

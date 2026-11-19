@@ -1,0 +1,7 @@
+matches:
+  - trigger: ":rarrow:"
+    replace: "→"
+  - trigger: ":larrow:"
+    replace: "←"
+  - trigger: ":check:"
+    replace: "✓"

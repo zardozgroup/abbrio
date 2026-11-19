@@ -1,0 +1,5 @@
+filter_class: "^com\\.apple\\.mail$"
+extra_includes:
+  - "../match/_email-signatures.yml"
+extra_excludes:
+  - "../match/autocorrect.yml"
