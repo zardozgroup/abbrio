@@ -215,13 +215,18 @@ struct GeneralSettings: View {
                     Toggle("Show main window at launch", isOn: $preferences.showsMainWindowAtLaunch)
                         .labelsHidden().toggleStyle(.switch)
                 }
+                SettingsRow(title: "Show Dock icon", note: "When hidden, use the menu bar icon to open Abbrio.") {
+                    Toggle("Show Dock icon", isOn: $preferences.showsDockIcon)
+                        .labelsHidden().toggleStyle(.switch)
+                }
                 SettingsRow(
                     title: "Show menu bar icon",
-                    note: preferences.showsMenuBarIcon ? nil : "Open Abbrio again from the Dock or the Finder to get its window back.",
+                    note: !preferences.showsDockIcon ? "Required while the Dock icon is hidden." : (preferences.showsMenuBarIcon ? nil : "Open Abbrio again from the Dock or the Finder to get its window back."),
                     showsDivider: false
                 ) {
                     Toggle("Show menu bar icon", isOn: $preferences.showsMenuBarIcon)
                         .labelsHidden().toggleStyle(.switch)
+                        .disabled(!preferences.showsDockIcon)
                 }
             }
 

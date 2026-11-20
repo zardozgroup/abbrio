@@ -20,6 +20,15 @@ public nonisolated enum RenameFilePolicy: String, CaseIterable, Sendable {
 @Observable
 public final class AppPreferences {
     @ObservationIgnored private let defaults: UserDefaults
+    @ObservationIgnored public var dockIconVisibilityChanged: ((Bool) -> Void)?
+
+    public var showsDockIcon: Bool {
+        didSet {
+            defaults.set(showsDockIcon, forKey: "showsDockIcon")
+            if !showsDockIcon { showsMenuBarIcon = true }
+            dockIconVisibilityChanged?(showsDockIcon)
+        }
+    }
 
     public var showsMainWindowAtLaunch: Bool {
         didSet { defaults.set(showsMainWindowAtLaunch, forKey: "showsMainWindowAtLaunch") }
@@ -50,6 +59,7 @@ public final class AppPreferences {
 
     public init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
+        showsDockIcon = defaults.object(forKey: "showsDockIcon") as? Bool ?? true
         showsMainWindowAtLaunch = defaults.object(forKey: "showsMainWindowAtLaunch") as? Bool ?? true
         showsMenuBarIcon = defaults.object(forKey: "showsMenuBarIcon") as? Bool ?? true
         let speed = defaults.integer(forKey: "typingSpeed")
@@ -58,6 +68,7 @@ public final class AppPreferences {
         renameFilePolicy = defaults.string(forKey: "renameFilePolicy").flatMap(RenameFilePolicy.init) ?? .ask
         let delay = defaults.integer(forKey: "quickSearchInsertionDelay")
         insertionDelay = Self.insertionDelayRange.contains(delay) ? delay : Self.defaultInsertionDelay
+        if !showsDockIcon { showsMenuBarIcon = true }
     }
 
     public var binaryURL: URL? {

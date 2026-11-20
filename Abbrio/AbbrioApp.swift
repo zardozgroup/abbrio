@@ -6,6 +6,15 @@ import AbbrioUI
 final class AppDelegate: NSObject, NSApplicationDelegate {
     static var model: AppModel?
 
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        guard ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil,
+              let preferences = Self.model?.preferences else { return }
+        preferences.dockIconVisibilityChanged = { showsDockIcon in
+            NSApp.setActivationPolicy(showsDockIcon ? .regular : .accessory)
+        }
+        NSApp.setActivationPolicy(preferences.showsDockIcon ? .regular : .accessory)
+    }
+
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
         guard let editingWindow = sender.windows.first(where: {
             $0.identifier?.rawValue == "main" && ($0.isVisible || $0.isMiniaturized)
