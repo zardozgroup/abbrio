@@ -45,7 +45,11 @@ public struct MainWindow: View {
             model.openWindow = { [openWindow] id in openWindow(id: id) }
             model.openSettings = { [openSettings] in openSettings() }
             // With "Show main window at launch" off, the window the system opens at launch is closed again.
-            if model.takeLaunchWindowDismissal() { dismissWindow(id: "main") }
+            // It waits for the next turn of the run loop: closing the window while window restoration is still
+            // ordering it in can leave it on screen with every click and key press ignored.
+            if model.takeLaunchWindowDismissal() {
+                Task { @MainActor in dismissWindow(id: "main") }
+            }
         }
         .onChange(of: undoManager) { _, manager in model.undoManager = manager }
         .alert("New Abbreviation Set", isPresented: $model.isAskingForNewSetName) {
