@@ -272,3 +272,11 @@ struct StatusPill: View {
         }
     }
 }
+
+#if DEBUG
+#Preview("Main Window") {
+    @Previewable @State var model = WindowPreview.makeModel()
+    MainWindow(model: model)
+        .frame(width: 1280, height: 800)
+}
+#endif

@@ -369,3 +369,31 @@ struct QuickSearchField: NSViewRepresentable {
         }
     }
 }
+
+#if DEBUG
+#Preview("Quick Search") {
+    QuickSearchWindowPreview()
+}
+
+private struct QuickSearchWindowPreview: View {
+    @State private var search = QuickSearchModel(
+        model: WindowPreview.makeModel(), device: PreviewInsertionDevice()
+    )
+    @State private var controller: QuickSearchPanelController?
+
+    var body: some View {
+        Group {
+            if let controller {
+                QuickSearchView(search: search, controller: controller)
+            }
+        }
+        .task {
+            if controller == nil {
+                controller = QuickSearchPanelController(search: search)
+                // The canvas hosts the content itself; it must not open a separate floating panel.
+                search.showPanel = {}
+            }
+        }
+    }
+}
+#endif

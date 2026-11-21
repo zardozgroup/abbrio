@@ -329,7 +329,7 @@ nonisolated final class ChipCell: NSTextAttachmentCell {
     private static let height: CGFloat = 19
     private static let symbolWidth: CGFloat = 15
 
-    init(style: ChipStyle) {
+    @MainActor init(style: ChipStyle) {
         self.style = style
         super.init(textCell: "")
     }

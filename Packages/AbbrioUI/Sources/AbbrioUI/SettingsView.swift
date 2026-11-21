@@ -728,3 +728,10 @@ struct StatisticsSettings: View {
         }
     }
 }
+
+#if DEBUG
+#Preview("Settings") {
+    @Previewable @State var model = WindowPreview.makeModel()
+    SettingsView(model: model)
+}
+#endif

@@ -193,3 +193,10 @@ struct QuickDefineForm: View {
         }
     }
 }
+
+#if DEBUG
+#Preview("Quick Define") {
+    @Previewable @State var model = WindowPreview.makeModel(quickDefine: true)
+    QuickDefineView(model: model)
+}
+#endif
