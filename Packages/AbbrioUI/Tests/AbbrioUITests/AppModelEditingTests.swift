@@ -99,7 +99,7 @@ final class AppModelEditingTests: XCTestCase {
                 try FileManager.default.moveItem(at: url, to: trash.appendingPathComponent(url.lastPathComponent))
             }
         )
-        model.autosaveDelay = .seconds(60)
+        model.autosaveDelayOverride = .seconds(60)
         await model.load()
         model.selectedSetID = "work.yml"
         return model
@@ -136,7 +136,7 @@ final class AppModelEditingTests: XCTestCase {
 
     func testTypingIsSavedAfterAPause() async throws {
         let model = await makeModel()
-        model.autosaveDelay = .milliseconds(40)
+        model.autosaveDelayOverride = .milliseconds(40)
         select(";addr", in: model)
         model.updateDraft { $0.label = "Office" }
         model.updateDraft { $0.label = "Office address" }

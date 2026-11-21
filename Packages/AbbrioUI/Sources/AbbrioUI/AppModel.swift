@@ -157,8 +157,8 @@ public final class AppModel {
     public private(set) var saveState = SaveState.idle
     /// A message for an alert, after something other than an item edit went wrong.
     public var alertMessage: String?
-    /// How long typing must pause before the draft is saved.
-    public var autosaveDelay = Duration.milliseconds(500)
+    /// Overrides the saved delay in tests that need to control when autosave runs.
+    public var autosaveDelayOverride: Duration?
     /// The window's undo manager, so Edit > Undo reaches file changes.
     public weak var undoManager: UndoManager?
 
@@ -337,10 +337,13 @@ public final class AppModel {
         }
         isAdjustingSelection = false
 
-        guard selectedSnippetID == editingID, let draft, let savedDraft else {
+        guard selectedSnippetID == editingID,
+              draft != nil,
+              savedDraft != nil else {
             beginEditing()
             return
         }
+
         guard !isAddingItem else { return }
         let onDisk = selectedSnippet
         if !hasUnsavedChanges {
@@ -675,7 +678,7 @@ public final class AppModel {
 
     private func scheduleAutosave() {
         autosaveTask?.cancel()
-        let delay = autosaveDelay
+        let delay = autosaveDelayOverride ?? .milliseconds(preferences.autosaveDelay)
         autosaveTask = Task { [weak self] in
             do {
                 try await Task.sleep(for: delay)

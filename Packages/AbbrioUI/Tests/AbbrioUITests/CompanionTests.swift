@@ -415,16 +415,19 @@ final class CompanionTests: XCTestCase {
         let preferences = AppPreferences(defaults: defaults)
         XCTAssertEqual(preferences.typingSpeed, 40)
         XCTAssertEqual(preferences.insertionDelay, 200)
+        XCTAssertEqual(preferences.autosaveDelay, 500)
         XCTAssertEqual(preferences.renameFilePolicy, .ask)
         XCTAssertTrue(preferences.showsMenuBarIcon)
         XCTAssertNil(preferences.binaryURL)
         preferences.typingSpeed = 65
+        preferences.autosaveDelay = 750
         preferences.renameFilePolicy = .always
         preferences.showsMainWindowAtLaunch = false
         preferences.binaryPath = "/opt/espanso"
         defaults.set(999_999, forKey: "quickSearchInsertionDelay")
         let again = AppPreferences(defaults: defaults)
         XCTAssertEqual(again.typingSpeed, 65)
+        XCTAssertEqual(again.autosaveDelay, 750)
         XCTAssertEqual(again.renameFilePolicy, .always)
         XCTAssertFalse(again.showsMainWindowAtLaunch)
         XCTAssertEqual(again.binaryURL?.path, "/opt/espanso")

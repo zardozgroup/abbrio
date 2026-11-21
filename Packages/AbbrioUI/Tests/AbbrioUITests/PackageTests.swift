@@ -113,7 +113,7 @@ final class PackageTests: XCTestCase {
             locator: EspansoLocator(override: URL(fileURLWithPath: "/nonexistent/espanso"), searchPath: "", isExecutable: { _ in true }),
             hub: HubService(fetch: { try await hub.fetch($0) }, cacheFolder: cache, now: { clock })
         )
-        model.autosaveDelay = .seconds(3600)
+        model.autosaveDelayOverride = .seconds(3600)
         await model.load()
         return model
     }

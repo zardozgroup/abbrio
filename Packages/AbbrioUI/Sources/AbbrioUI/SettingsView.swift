@@ -254,6 +254,15 @@ struct GeneralSettings: View {
             }
 
             SettingsCard {
+                SettingsRow(
+                    title: "Wait before saving changes",
+                    note: "The pause after typing before Abbrio saves the edited item."
+                ) {
+                    NumberField(value: preferences.autosaveDelay, range: AppPreferences.autosaveDelayRange) {
+                        preferences.autosaveDelay = $0 ?? AppPreferences.defaultAutosaveDelay
+                    }
+                    Text("ms").foregroundStyle(.secondary)
+                }
                 SettingsRow(title: "Typing speed for time-saved estimates") {
                     NumberField(value: preferences.typingSpeed, range: AppPreferences.typingSpeedRange) {
                         preferences.typingSpeed = $0 ?? AppPreferences.defaultTypingSpeed

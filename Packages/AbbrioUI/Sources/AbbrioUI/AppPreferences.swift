@@ -51,10 +51,16 @@ public final class AppPreferences {
     public var insertionDelay: Int {
         didSet { defaults.set(insertionDelay, forKey: "quickSearchInsertionDelay") }
     }
+    /// Milliseconds typing must pause before an edited item is saved.
+    public var autosaveDelay: Int {
+        didSet { defaults.set(autosaveDelay, forKey: "autosaveDelay") }
+    }
 
     public static let defaultTypingSpeed = 40
     public static let defaultInsertionDelay = 200
+    public static let defaultAutosaveDelay = 500
     public static let insertionDelayRange = 50...2000
+    public static let autosaveDelayRange = 100...5000
     public static let typingSpeedRange = 5...200
 
     public init(defaults: UserDefaults = .standard) {
@@ -68,6 +74,8 @@ public final class AppPreferences {
         renameFilePolicy = defaults.string(forKey: "renameFilePolicy").flatMap(RenameFilePolicy.init) ?? .ask
         let delay = defaults.integer(forKey: "quickSearchInsertionDelay")
         insertionDelay = Self.insertionDelayRange.contains(delay) ? delay : Self.defaultInsertionDelay
+        let autosave = defaults.integer(forKey: "autosaveDelay")
+        autosaveDelay = Self.autosaveDelayRange.contains(autosave) ? autosave : Self.defaultAutosaveDelay
         if !showsDockIcon { showsMenuBarIcon = true }
     }
 

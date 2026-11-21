@@ -58,7 +58,7 @@ final class AppModelDynamicTests: XCTestCase {
             locator: EspansoLocator(searchPath: "", isExecutable: { _ in false }),
             discard: { try FileManager.default.removeItem(at: $0) }
         )
-        model.autosaveDelay = .seconds(3600)
+        model.autosaveDelayOverride = .seconds(3600)
         await model.load()
         model.selectedSetID = "work.yml"
         model.selectedSnippetID = Snippet.ID(file: "match/work.yml", index: index)
