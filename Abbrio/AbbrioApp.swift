@@ -5,14 +5,48 @@ import AbbrioUI
 /// it when the menu bar icon is hidden and every window is closed.
 final class AppDelegate: NSObject, NSApplicationDelegate {
     static var model: AppModel?
+    private var activationPolicyRevision = 0
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         guard ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil,
               let preferences = Self.model?.preferences else { return }
-        preferences.dockIconVisibilityChanged = { showsDockIcon in
-            NSApp.setActivationPolicy(showsDockIcon ? .regular : .accessory)
+        preferences.dockIconVisibilityChanged = { [weak self] showsDockIcon in
+            self?.setDockIconVisible(showsDockIcon)
         }
         NSApp.setActivationPolicy(preferences.showsDockIcon ? .regular : .accessory)
+    }
+
+    private func setDockIconVisible(_ visible: Bool) {
+        let app = NSApplication.shared
+        let policy: NSApplication.ActivationPolicy = visible ? .regular : .accessory
+        guard app.activationPolicy() != policy else { return }
+
+        activationPolicyRevision += 1
+        let revision = activationPolicyRevision
+        let wasActive = app.isActive
+        let keyWindow = app.keyWindow
+        let windows = app.orderedWindows.filter {
+            $0.isVisible && !$0.isMiniaturized && $0.isOnActiveSpace && $0.level == .normal
+        }
+        guard app.setActivationPolicy(policy), wasActive, !windows.isEmpty else { return }
+
+        // Changing activation policy can send the app behind other apps. Restore its windows after
+        // AppKit processes the change, back to front, keeping Settings above the editor when it was key.
+        DispatchQueue.main.async { [weak self] in
+            guard let self, self.activationPolicyRevision == revision,
+                  app.activationPolicy() == policy else { return }
+            let remainingWindows = windows.filter {
+                $0.isVisible && !$0.isMiniaturized && $0.isOnActiveSpace
+            }
+            guard !remainingWindows.isEmpty else { return }
+            app.activate()
+            for window in remainingWindows.reversed() {
+                window.orderFrontRegardless()
+            }
+            if let keyWindow, remainingWindows.contains(where: { $0 === keyWindow }) {
+                keyWindow.makeKey()
+            }
+        }
     }
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
