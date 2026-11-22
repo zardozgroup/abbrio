@@ -378,7 +378,7 @@ public final class AppModel {
     /// The lines of the list: the selected set, or matches from every set while a search is active.
     ///
     /// Views read this several times per update, and a set can hold tens of thousands of items, so the rows
-    /// for the last few selections and searches are kept until the sets change.
+    /// for the last few selections and searches are kept until the sets or match case notes change.
     public var rows: [SnippetRow] {
         let query = searchQuery
         let key = RowCacheKey(
@@ -386,8 +386,8 @@ public final class AppModel {
             selectedSetID: query.isEmpty ? selectedSetID : nil,
             sortOrder: sortOrder
         )
-        if listCache.sets != sets {
-            listCache = ListCache(sets: sets)
+        if listCache.sets != sets || listCache.matchNotes != sidecar.matches {
+            listCache = ListCache(sets: sets, matchNotes: sidecar.matches)
         }
         var rows: [SnippetRow]
         if let cached = listCache.rows(for: key) {
@@ -398,7 +398,10 @@ public final class AppModel {
         }
         // The item being added changes with every keystroke, so it is added after the cache.
         if let newItem, query.isEmpty, let set = selectedSet, set.files.first?.path == newItem.id.file {
-            rows.append(SnippetRow(snippet: newItem, setName: set.name, isDuplicate: false, preview: ExpansionPreview()))
+            rows.append(SnippetRow(
+                snippet: newItem, setName: set.name, isDuplicate: false, preview: ExpansionPreview(),
+                displayAliases: displayAliases(for: newItem, in: set, draftForm: triggerForm)
+            ))
         }
         return rows
     }
@@ -416,6 +419,7 @@ public final class AppModel {
         static let capacity = 4
 
         var sets: [SnippetSet] = []
+        var matchNotes: [String: [String: MatchNote]] = [:]
         /// The most recently used list last.
         var recent: [(key: RowCacheKey, rows: [SnippetRow])] = []
         /// The search text of every item, by set and position, made when the first search runs.
@@ -444,7 +448,8 @@ public final class AppModel {
                 snippet: snippet,
                 setName: set.name,
                 isDuplicate: !duplicates.conflicts(for: snippet.id).isEmpty,
-                preview: preview
+                preview: preview,
+                displayAliases: displayAliases(for: snippet, in: set)
             ))
         }
         if query.isEmpty {
@@ -554,13 +559,27 @@ public final class AppModel {
 
     private func triggerForm(for snippet: Snippet) -> TriggerForm? {
         guard !snippet.isRegex, let set = set(containing: snippet.id) else { return nil }
+        return triggerForm(for: snippet, in: set)
+    }
+
+    private func triggerForm(for snippet: Snippet, in set: SnippetSet) -> TriggerForm {
         let bare = TriggerForm(
             triggers: snippet.triggers, prefix: set.info.prefix, suffix: set.info.suffix, caseInsensitive: false
         )
+        guard sidecar.isCaseInsensitive(bare.abbreviation, in: set.id) else { return bare }
         return TriggerForm(
-            triggers: snippet.triggers, prefix: set.info.prefix, suffix: set.info.suffix,
-            caseInsensitive: sidecar.isCaseInsensitive(bare.abbreviation, in: set.id)
+            triggers: snippet.triggers, prefix: set.info.prefix, suffix: set.info.suffix, caseInsensitive: true
         )
+    }
+
+    /// An override for rows whose case variants the editor folds. Other rows use the triggers as written.
+    private func displayAliases(for snippet: Snippet, in set: SnippetSet, draftForm: TriggerForm? = nil) -> [String]? {
+        guard snippet.triggers.count > 1, !snippet.isRegex else { return nil }
+        guard draftForm != nil || sidecar.matches[set.id] != nil else { return nil }
+        let form = draftForm ?? triggerForm(for: snippet, in: set)
+        guard form.isCaseInsensitive else { return nil }
+        guard form.usesAffixes else { return form.aliases }
+        return form.aliases.map { set.info.prefix + $0 + set.info.suffix }
     }
 
     /// The choice shown in the Case pop-up.

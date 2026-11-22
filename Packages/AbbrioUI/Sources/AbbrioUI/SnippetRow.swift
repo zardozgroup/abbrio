@@ -35,15 +35,22 @@ public nonisolated enum OptionGlyph: Hashable, Sendable {
 public nonisolated struct SnippetRow: Identifiable, Hashable, Sendable {
     public var id: Snippet.ID
     public var abbreviation: String
+    /// The table label when there are aliases. Sorting uses the first trigger in `abbreviation`.
+    let abbreviationWithAliases: String?
     public var expansion: String
     public var description: String
     public var glyphs: [OptionGlyph]
     /// Name of the set the match belongs to.
     public var setName: String
 
-    public init(snippet: Snippet, setName: String, isDuplicate: Bool, preview: ExpansionPreview) {
+    public init(
+        snippet: Snippet, setName: String, isDuplicate: Bool, preview: ExpansionPreview, displayAliases: [String]? = nil
+    ) {
         id = snippet.id
         abbreviation = snippet.abbreviation
+        let aliases = displayAliases?[...] ?? snippet.triggers.dropFirst()
+        abbreviationWithAliases = snippet.isRegex || aliases.isEmpty
+            ? nil : ([snippet.abbreviation] + aliases).joined(separator: ", ")
         expansion = preview.text(for: snippet)
         description = snippet.label ?? ""
         self.setName = setName
