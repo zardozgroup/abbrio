@@ -160,6 +160,7 @@ An unchecked set is a file renamed with a leading underscore. Packages are locke
 **Abbreviation list (center).**
 
 - Columns: Abbreviation, Expansion (first line), Description. All columns sort, and numbers sort numerically.
+- Each match has one row. The Abbreviation column shows the primary trigger and its aliases in file order, separated by commas, with the full list on hover. Sorting uses the primary trigger. The app folds case variants for matches marked "Case does not matter" as it does in the editor.
 - Small glyphs mark each item's options: case mode, word break, dynamic content, form, picture, script, regex, and duplicate trigger.
 - Search works like Typinator's. Several words must all appear, in any order, and a quoted phrase must match exactly. It looks at the abbreviation, expansion text, description and search terms. ⌘F focuses the search field.
 

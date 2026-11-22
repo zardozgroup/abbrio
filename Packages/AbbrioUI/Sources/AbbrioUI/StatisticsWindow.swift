@@ -314,3 +314,11 @@ private struct ShareBar: View {
         }
     }
 }
+
+#if DEBUG
+#Preview("Statistics") {
+    @Previewable @State var model = WindowPreview.makeModel()
+    StatisticsWindow(model: model)
+        .frame(width: 1100, height: 740)
+}
+#endif

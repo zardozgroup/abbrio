@@ -20,6 +20,15 @@ public nonisolated enum RenameFilePolicy: String, CaseIterable, Sendable {
 @Observable
 public final class AppPreferences {
     @ObservationIgnored private let defaults: UserDefaults
+    @ObservationIgnored public var dockIconVisibilityChanged: ((Bool) -> Void)?
+
+    public var showsDockIcon: Bool {
+        didSet {
+            defaults.set(showsDockIcon, forKey: "showsDockIcon")
+            if !showsDockIcon { showsMenuBarIcon = true }
+            dockIconVisibilityChanged?(showsDockIcon)
+        }
+    }
 
     public var showsMainWindowAtLaunch: Bool {
         didSet { defaults.set(showsMainWindowAtLaunch, forKey: "showsMainWindowAtLaunch") }
@@ -42,14 +51,21 @@ public final class AppPreferences {
     public var insertionDelay: Int {
         didSet { defaults.set(insertionDelay, forKey: "quickSearchInsertionDelay") }
     }
+    /// Milliseconds typing must pause before an edited item is saved.
+    public var autosaveDelay: Int {
+        didSet { defaults.set(autosaveDelay, forKey: "autosaveDelay") }
+    }
 
     public static let defaultTypingSpeed = 40
     public static let defaultInsertionDelay = 200
+    public static let defaultAutosaveDelay = 500
     public static let insertionDelayRange = 50...2000
+    public static let autosaveDelayRange = 100...5000
     public static let typingSpeedRange = 5...200
 
     public init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
+        showsDockIcon = defaults.object(forKey: "showsDockIcon") as? Bool ?? true
         showsMainWindowAtLaunch = defaults.object(forKey: "showsMainWindowAtLaunch") as? Bool ?? true
         showsMenuBarIcon = defaults.object(forKey: "showsMenuBarIcon") as? Bool ?? true
         let speed = defaults.integer(forKey: "typingSpeed")
@@ -58,6 +74,9 @@ public final class AppPreferences {
         renameFilePolicy = defaults.string(forKey: "renameFilePolicy").flatMap(RenameFilePolicy.init) ?? .ask
         let delay = defaults.integer(forKey: "quickSearchInsertionDelay")
         insertionDelay = Self.insertionDelayRange.contains(delay) ? delay : Self.defaultInsertionDelay
+        let autosave = defaults.integer(forKey: "autosaveDelay")
+        autosaveDelay = Self.autosaveDelayRange.contains(autosave) ? autosave : Self.defaultAutosaveDelay
+        if !showsDockIcon { showsMenuBarIcon = true }
     }
 
     public var binaryURL: URL? {

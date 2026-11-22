@@ -209,3 +209,8 @@ public struct AboutMenuItem: View {
         }
     }
 }
+
+#Preview {
+    AboutView()
+}
+

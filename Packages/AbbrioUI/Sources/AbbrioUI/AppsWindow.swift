@@ -586,7 +586,7 @@ private struct SetSwitchRow: View {
     let note: String
     let tag: String?
     let isDisabled: Bool
-    let change: (Bool) -> Void
+    let change: @MainActor @Sendable (Bool) -> Void
 
     var body: some View {
         HStack(spacing: 10) {
@@ -770,3 +770,74 @@ private final class AppSearch {
         query.enableUpdates()
     }
 }
+
+
+#if DEBUG
+#Preview("Apps") {
+    @Previewable @State var model = WindowPreview.makeModel()
+    AppsWindow(model: model)
+        .frame(width: 1080, height: 760)
+}
+#endif
+
+#if DEBUG
+import EspansoCLI
+import Foundation
+
+/// Isolated dependencies for window previews, separate from the user's configuration and services.
+enum WindowPreview {
+    static func makeModel(quickDefine: Bool = false) -> AppModel {
+        let identifier = "AbbrioPreview-\(UUID().uuidString)"
+        guard let defaults = UserDefaults(suiteName: identifier) else {
+            preconditionFailure("Could not create preview preferences.")
+        }
+        let model = AppModel(
+            environment: AppEnvironment(
+                configFolderOverride: FileManager.default.temporaryDirectory
+                    .appendingPathComponent(identifier, isDirectory: true),
+                fallbackConfigFolders: []
+            ),
+            runner: PreviewCommandRunner(),
+            locator: EspansoLocator(searchPath: "", isExecutable: { _ in false }),
+            defaults: defaults,
+            isSecureInputOn: { false },
+            readClipboard: { nil },
+            hub: HubService(fetch: { _ in throw URLError(.notConnectedToInternet) }, cacheFolder: nil)
+        )
+        // Start with an empty offline catalog without showing a download failure on appearance.
+        model.packageCenter.catalogDate = Date()
+        if quickDefine {
+            model.quickDefine = QuickDefineRequest(
+                source: .clipboard,
+                text: "Thank you for getting in touch. I will reply shortly."
+            )
+        }
+        return model
+    }
+}
+
+private struct PreviewCommandRunner: CommandRunner {
+    func run(
+        _ executable: URL, arguments: [String], environment: [String: String]?, timeout: TimeInterval
+    ) async throws -> CommandResult {
+        throw CommandError.launchFailed("Commands are unavailable in window previews.")
+    }
+}
+
+/// Keeps Quick Search interactions inside the preview.
+final class PreviewInsertionDevice: InsertionDevice {
+    var isTrusted: Bool { false }
+    var modifiersAreDown: Bool { false }
+    var clipboardChangeCount: Int { 0 }
+
+    func askForTrust() {}
+    func saveClipboard() -> ClipboardContents { ClipboardContents() }
+    func restoreClipboard(_ contents: ClipboardContents) {}
+    func setClipboard(_ text: String) {}
+    func paste() {}
+    func moveLeft(_ count: Int) {}
+    func selectedText() -> String? { nil }
+    func copy() {}
+    func clipboardText() -> String? { nil }
+}
+#endif

@@ -207,7 +207,9 @@ struct SnippetTable: NSViewRepresentable {
                 let cell = tableView.makeView(withIdentifier: identifier, owner: nil) as? TextCell
                     ?? TextCell(column: column)
                 switch column {
-                case .abbreviation: cell.text = item.abbreviation
+                case .abbreviation:
+                    cell.text = item.abbreviationWithAliases ?? item.abbreviation
+                    cell.toolTip = item.abbreviationWithAliases
                 case .expansion: cell.text = item.expansion
                 default: cell.text = item.description
                 }

@@ -72,7 +72,7 @@ final class AppModelSetInfoTests: XCTestCase {
             },
             ownBundleID: ownBundleID
         )
-        model.autosaveDelay = .seconds(3600)
+        model.autosaveDelayOverride = .seconds(3600)
         await model.load()
         return model
     }

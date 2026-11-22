@@ -1,6 +1,7 @@
 import XCTest
 import AppKit
 import SwiftUI
+import ConfigStore
 import EspansoCLI
 import SnippetModel
 @testable import AbbrioUI
@@ -69,9 +70,13 @@ final class SnippetTableTests: XCTestCase {
         scrollView.layoutSubtreeIfNeeded()
     }
 
-    private func text(row: Int, column: SnippetTable.ListColumn) -> String? {
+    private func cell(row: Int, column: SnippetTable.ListColumn) -> NSTableCellView? {
         let index = table.column(withIdentifier: column.identifier)
-        return (table.view(atColumn: index, row: row, makeIfNecessary: true) as? NSTableCellView)?.textField?.stringValue
+        return table.view(atColumn: index, row: row, makeIfNecessary: true) as? NSTableCellView
+    }
+
+    private func text(row: Int, column: SnippetTable.ListColumn) -> String? {
+        cell(row: row, column: column)?.textField?.stringValue
     }
 
     func testShowsTheRowsInTheModelsOrder() {
@@ -80,6 +85,77 @@ final class SnippetTableTests: XCTestCase {
         XCTAssertEqual(text(row: 0, column: .expansion), "nine")
         XCTAssertEqual(text(row: 0, column: .description), "Number nine")
         XCTAssertEqual(table.tableColumns.map(\.title), ["Abbreviation", "Expansion", "Description", "Options"])
+    }
+
+    func testShowsAllTriggersInOneRowAndFollowsAliasEdits() throws {
+        try """
+        matches:
+          - triggers: [accomodate, acommodate]
+            replace: accommodate
+            word: true
+            propagate_case: true
+
+        """.write(to: root.appendingPathComponent("match/autocorrect.yml"), atomically: true, encoding: .utf8)
+        model.reloadNow()
+        model.selectedSetID = "autocorrect.yml"
+        sync()
+
+        XCTAssertEqual(table.numberOfRows, 1)
+        XCTAssertEqual(text(row: 0, column: .abbreviation), "accomodate, acommodate")
+        XCTAssertEqual(cell(row: 0, column: .abbreviation)?.toolTip, "accomodate, acommodate")
+        XCTAssertEqual(text(row: 0, column: .expansion), "accommodate")
+        let id = try XCTUnwrap(model.selectedSnippetID)
+
+        model.searchText = "acommodate"
+        sync()
+        XCTAssertEqual(table.numberOfRows, 1)
+        XCTAssertEqual(table.selectedRow, 0)
+        XCTAssertEqual(model.selectedSnippetID, id)
+        XCTAssertEqual(text(row: 0, column: .abbreviation), "accomodate, acommodate")
+
+        model.searchText = ""
+        model.updateTriggers { $0.aliases.append("accomadate") }
+        XCTAssertTrue(model.commitDraft())
+        sync()
+        XCTAssertEqual(table.numberOfRows, 1)
+        XCTAssertEqual(text(row: 0, column: .abbreviation), "accomodate, acommodate, accomadate")
+
+        model.updateTriggers { $0.aliases.removeAll() }
+        XCTAssertTrue(model.commitDraft())
+        sync()
+        XCTAssertEqual(text(row: 0, column: .abbreviation), "accomodate")
+        XCTAssertNil(cell(row: 0, column: .abbreviation)?.toolTip)
+        XCTAssertEqual(model.selectedSnippetID, id)
+    }
+
+    func testCaseNotesFoldOnlyCaseVariantsAndKeepAffixesInTheTable() throws {
+        try """
+        matches:
+          - triggers: [';btw!', ';Btw!', ';BTW!', ';bytw!', ';Bytw!', ';BYTW!']
+            replace: by the way
+          - triggers: [';sig!', ';Sig!', ';SIG!']
+            replace: See you soon
+
+        """.write(to: root.appendingPathComponent("match/work.yml"), atomically: true, encoding: .utf8)
+        model.reloadNow()
+        let set = try XCTUnwrap(model.selectedSet)
+        var info = set.info
+        info.prefix = ";"
+        info.suffix = "!"
+        XCTAssertNil(model.applySetInfo(info, name: set.name, to: set.id, adoptingAffixes: true))
+        sync()
+        XCTAssertEqual(text(row: 0, column: .abbreviation), ";btw!, ;Btw!, ;BTW!, ;bytw!, ;Bytw!, ;BYTW!")
+        XCTAssertEqual(text(row: 1, column: .abbreviation), ";sig!, ;Sig!, ;SIG!")
+
+        model.updateSidecar { notes in
+            notes.setCaseInsensitive(true, for: "btw", in: set.id)
+            notes.setCaseInsensitive(true, for: "sig", in: set.id)
+        }
+        sync()
+        XCTAssertEqual(table.numberOfRows, 2)
+        XCTAssertEqual(text(row: 0, column: .abbreviation), ";btw!, ;bytw!")
+        XCTAssertEqual(text(row: 1, column: .abbreviation), ";sig!")
+        XCTAssertNil(cell(row: 1, column: .abbreviation)?.toolTip)
     }
 
     func testSelectionFollowsTheModelAndTheTable() {

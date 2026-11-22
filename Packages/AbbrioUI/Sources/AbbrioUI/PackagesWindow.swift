@@ -626,3 +626,11 @@ nonisolated enum PackageText {
         }
     }
 }
+
+#if DEBUG
+#Preview("Packages") {
+    @Previewable @State var model = WindowPreview.makeModel()
+    PackagesWindow(model: model)
+        .frame(width: 1000, height: 740)
+}
+#endif
