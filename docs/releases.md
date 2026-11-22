@@ -1,8 +1,33 @@
 # Distributing Abbrio
 
 Releases are universal macOS apps signed with Developer ID, delivered as notarized disk images.
-Build and export in Xcode; use the local packaging script for the disk image. The script submits
-the disk image to Apple but never commits, tags, pushes or uploads to GitHub.
+GitHub Actions can publish them after checks pass on `main`. The manual procedure below covers
+building and exporting in Xcode and running the packaging script locally.
+
+## Release from GitHub Actions
+
+In **Settings → Environments**, configure the `release` environment for `main`. Add these environment
+secrets and variables.
+
+| Name | Kind | Value |
+| --- | --- | --- |
+| `BUILD_CERTIFICATE_BASE64` | Secret | Base64 of a Developer ID Application `.p12` export containing its private key |
+| `P12_PASSWORD` | Secret | Password used to export the `.p12` |
+| `APPLE_ID` | Secret | Email address for the Apple Account on the release team |
+| `APPLE_APP_SPECIFIC_PASSWORD` | Secret | Apple app-specific password for notarization |
+| `ABBRIO_DEVELOPMENT_TEAM` | Variable | Apple Developer Team ID |
+| `ABBRIO_SIGNING_IDENTITY` | Variable | Full Developer ID Application certificate name, including the Team ID in parentheses |
+
+To test the signing and notarization setup, go to **Actions → Checks → Run workflow**, choose `main`,
+and select **Build a notarized DMG as a workflow artifact**. The run's artifact contains the DMG and its
+SHA-256 file. Use it to check installation and launch on a clean Mac or test account.
+
+To release a new version, update the app target's marketing version and build number and merge the
+change to `main`. After checks pass, the release job builds the merged revision, signs and notarizes it,
+and publishes both files to the GitHub Release for `v<version>`. An existing release or draft reserves
+that version and the job skips it. If publication stops after creating the tag, rerun the original job
+to use the same tagged commit. If it stops with a draft, finish that draft with verified files built
+from the tagged commit.
 
 ## Prepare the app
 

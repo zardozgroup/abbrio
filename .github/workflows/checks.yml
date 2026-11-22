@@ -5,12 +5,17 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      package_dmg:
+        description: Build a notarized DMG as a workflow artifact
+        type: boolean
+        default: false
 
 permissions:
   contents: read
 
 concurrency:
-  group: checks-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: checks-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}
   cancel-in-progress: true
 
 defaults:
@@ -86,6 +91,7 @@ jobs:
       - name: Check DMG script
         run: |
           bash -n scripts/package-dmg.sh
+          bash -n scripts/build-release.sh
 
           # Each call must stop with exit status 1 before any signing or notarization.
           expect_early_exit() {
@@ -97,12 +103,13 @@ jobs:
               bash scripts/package-dmg.sh "$@" 2>&1)
             status=$?
             set -e
-            echo "$output"
             if [[ $status -ne 1 ]]; then
+              echo "$output"
               echo "::error::Expected exit status 1, got $status (arguments: $*)."
               exit 1
             fi
             if [[ "$output" != *"$expected"* ]]; then
+              echo "$output"
               echo "::error::Expected the message '$expected' (arguments: $*)."
               exit 1
             fi
@@ -112,3 +119,100 @@ jobs:
           expect_early_exit 'Usage:' only-one-argument
           expect_early_exit 'Usage:' one two three
           expect_early_exit 'ABBRIO_DEVELOPMENT_TEAM' /nonexistent/Abbrio.app sample-profile
+
+  release:
+    name: Package release
+    needs: checks
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.package_dmg))
+    runs-on: xcode-27
+    timeout-minutes: 90
+    environment: release
+    permissions:
+      contents: write
+    concurrency:
+      group: abbrio-release
+      queue: max
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Check release version
+        id: version
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version=$(xcodebuild -project Abbrio.xcodeproj -scheme Abbrio -configuration Release \
+            -destination 'generic/platform=macOS' -showBuildSettings -json \
+            | jq -er '.[] | select(.target == "Abbrio") | .buildSettings.MARKETING_VERSION')
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo '::error::Expected a numeric major.minor.patch marketing version.'
+            exit 1
+          fi
+
+          tag="v$version"
+          if [[ "$GITHUB_EVENT_NAME" == push ]]; then
+            tagged_commit=$(git ls-remote --tags origin "refs/tags/$tag" | cut -f 1)
+            if [[ -n "$tagged_commit" && "$tagged_commit" != "$GITHUB_SHA" ]]; then
+              echo "$tag already points to a different revision. Skipping packaging."
+              exit 0
+            fi
+
+            releases=$(gh api --paginate "repos/$GITHUB_REPOSITORY/releases?per_page=100" \
+              --jq ".[] | select(.tag_name == \"$tag\") | .id")
+            if [[ -n "$releases" ]]; then
+              echo "A release or draft already exists for $tag. Skipping packaging."
+              exit 0
+            fi
+          fi
+
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Sign, notarize and package Abbrio
+        if: steps.version.outputs.version != ''
+        env:
+          BUILD_CERTIFICATE_BASE64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
+          P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          ABBRIO_DEVELOPMENT_TEAM: ${{ vars.ABBRIO_DEVELOPMENT_TEAM }}
+          ABBRIO_SIGNING_IDENTITY: ${{ vars.ABBRIO_SIGNING_IDENTITY }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: bash scripts/build-release.sh "$VERSION"
+
+      - name: Upload test DMG
+        if: github.event_name == 'workflow_dispatch' && steps.version.outputs.version != ''
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: Abbrio-${{ steps.version.outputs.version }}
+          path: |
+            build/releases/${{ steps.version.outputs.version }}/Abbrio-${{ steps.version.outputs.version }}.dmg
+            build/releases/${{ steps.version.outputs.version }}/Abbrio-${{ steps.version.outputs.version }}.dmg.sha256
+          if-no-files-found: error
+
+      - name: Publish GitHub Release
+        if: github.event_name == 'push' && steps.version.outputs.version != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          tag="v$VERSION"
+          ref="refs/tags/$tag"
+          dmg="build/releases/$VERSION/Abbrio-$VERSION.dmg"
+          (cd "$(dirname "$dmg")" && shasum -a 256 -c "$(basename "$dmg").sha256")
+
+          tagged_commit=$(git ls-remote --tags origin "$ref" | cut -f 1)
+          if [[ -z "$tagged_commit" ]]; then
+            gh api --method POST "repos/$GITHUB_REPOSITORY/git/refs" \
+              -f ref="$ref" -f sha="$GITHUB_SHA" --silent
+          elif [[ "$tagged_commit" != "$GITHUB_SHA" ]]; then
+            echo "::error::$tag points to a different revision."
+            exit 1
+          fi
+
+          gh release create "$tag" "$dmg" "$dmg.sha256" --repo "$GITHUB_REPOSITORY" \
+            --verify-tag --title "Abbrio $VERSION" --generate-notes \
+            --notes 'Requires macOS 14 or later and a separate installation of Espanso 2.x. Open the DMG and drag Abbrio to Applications.'

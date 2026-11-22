@@ -57,7 +57,11 @@ codesign --sign "$identity" --timestamp --identifier com.zardozgroup.abbrio.dmg 
 codesign --verify --strict --verbose=2 "$dmg"
 
 # Keep the submission result with the artifact so failures can be investigated.
-xcrun notarytool submit "$dmg" --keychain-profile "$profile" --wait --output-format plist > "$output/notarization.plist"
+notary_args=(--keychain-profile "$profile")
+if [[ -n "${ABBRIO_NOTARY_KEYCHAIN:-}" ]]; then
+    notary_args+=(--keychain "$ABBRIO_NOTARY_KEYCHAIN")
+fi
+xcrun notarytool submit "$dmg" "${notary_args[@]}" --wait --output-format plist > "$output/notarization.plist"
 status=$(/usr/libexec/PlistBuddy -c 'Print :status' "$output/notarization.plist")
 [[ "$status" == 'Accepted' ]] || fail "Notarization status: $status. See $output/notarization.plist."
 xcrun stapler staple "$dmg"
